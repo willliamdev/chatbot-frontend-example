@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERMINAL | EDUCHAT PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0c;          /* Fundo sólido e profundo */
+            --surface: #111114;     /* Superfície levemente mais clara */
+            --accent: #00ff88;      /* Verde neon moderno (mais puxado pro esmeralda) */
+            --text-dim: #71717a;    /* Cinza para metadados */
+            --text-main: #e4e4e7;   /* Branco acinzentado para leitura */
+            --border: #1f1f23;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* ─── ESTRUTURA CENTRALIZADA ─── */
+        .terminal-container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            background-color: var(--bg);
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            padding: 15px 25px;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        /* ─── ÁREA DE CONVERSA ─── */
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .entry {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 20px;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .label {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .user .label { color: var(--text-dim); }
+        
+        .content {
+            color: var(--text-main);
+            white-space: pre-wrap;
+        }
+
+        /* ─── ÁREA DE INPUT ─── */
+        .input-area {
+            padding: 30px 40px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+
+        .command-line {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--bg);
+            padding: 12px 20px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .command-line:focus-within {
+            border-color: var(--accent);
+        }
+
+        .prompt-char {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+        }
+
+        /* Estilização interna */
+        b { color: var(--accent); font-weight: 600; }
+        ul { list-style: none; padding-top: 10px; }
+        li::before { content: "→ "; color: var(--accent); }
+
+        /* Scrollbar Minimal */
+        #chat::-webkit-scrollbar { width: 4px; }
+        #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="terminal-container">
+    <div class="header">
+        <div><span class="status-dot"></span>EDUCHAT_CORE_V3</div>
+        <div id="clock">00:00:00</div>
+    </div>
+
+    <div id="chat">
+        <div class="entry bot">
+            <div class="label">[SYSTEM]</div>
+            <div class="content">Conexão segura estabelecida. Identifique-se para iniciar o protocolo de aprendizado.</div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="command-line">
+            <span class="prompt-char">></span>
+            <input id="pergunta" placeholder="Digite seu comando..." autocomplete="off" autofocus>
+        </div>
+    </div>
+</div>
+
+<script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("pergunta");
+    const clock = document.getElementById("clock");
+    
+    let nomeUsuario = null;
+    let memoria = [];
+
+    // Relógio
+    setInterval(() => {
+        const now = new Date();
+        clock.innerText = now.toTimeString().split(' ')[0];
+    }, 1000);
+
+    function addEntry(texto, tipo) {
+        const div = document.createElement("div");
+        div.className = `entry ${tipo}`;
+        
+        const label = tipo === 'user' ? `[${nomeUsuario || 'GUEST'}]` : '[CORE]';
+        
+        div.innerHTML = `
+            <div class="label">${label}</div>
+            <div class="content">${texto}</div>
+        `;
+        
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function enviar() {
+        const texto = input.value.trim();
+        if (!texto) return;
+
+        addEntry(texto, "user");
+        input.value = "";
+
+        if (!nomeUsuario) {
+            nomeUsuario = texto.toUpperCase();
+            addEntry(`Bem-vindo, <b>${nomeUsuario}</b>. Interface de TI pronta. O que deseja consultar?`, "bot");
+            return;
+        }
+
+        try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer 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",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `
+Você é um assistente educacional especializado em Tecnologia da Informação (TI).
+
+🚫 REGRAS IMPORTANTES:
+- Responda APENAS perguntas relacionadas a TI, como:
+  programação, redes, sistemas, banco de dados, inteligência artificial, tecnologia, computação, etc.
+- Se a pergunta NÃO for sobre TI, responda EXATAMENTE assim:
+
+"❌ Este assistente está configurado para responder apenas dúvidas relacionadas à área de Tecnologia da Informação (TI)."
+
+- NÃO tente responder assuntos fora de TI
+- NÃO improvise respostas fora do escopo
+
+📘 FORMATO DAS RESPOSTAS:
+- Seja direto
+- Use emojis para organizar:
+📘 conceito
+⚙️ características
+💻 exemplos
+🚀 vantagens
+
+- Use HTML simples: <b>, <ul>, <li>, <br>
+`
+          },
+
+          ...memoria.slice(-6),
+
+          {
+            role: "user",
+            content: texto
+          }
+        ]
+      })
+    });
+
+    const data = await res.json();
+
+    let resposta = data?.choices?.[0]?.message?.content || "Sem resposta.";
+
+    addMsg(resposta, "bot");
+
+    memoria.push(
+      { role: "user", content: texto },
+      { role: "assistant", content: resposta }
+    );
+
+    memoria = memoria.slice(-10);
+
+  } catch (erro) {
+    console.error(erro);
+    addMsg("❌ Erro ao conectar com IA.", "bot");
+  }
+}
+    input.addEventListener("keypress", e => { if (e.key === "Enter") enviar(); });
+</script>
+
+</body>
+</html>
